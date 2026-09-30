@@ -26,6 +26,7 @@ const mockFetchChapter = jest.fn();
 const mockFetchPage = jest.fn();
 const mockLoadAndPlay = jest.fn();
 const mockTtsCommand = jest.fn();
+const mockTtsState = jest.fn(() => 'idle');
 const mockSetImmersive = jest.fn();
 const mockShowBars = jest.fn();
 const mockUpdateTracked = jest.fn();
@@ -119,7 +120,7 @@ jest.mock('../useTtsSession', () => ({
     command: mockTtsCommand,
     loadAndPlay: mockLoadAndPlay,
     progress: { index: 0, total: 0, paragraphId: '' },
-    state: 'idle',
+    state: mockTtsState(),
     error: null,
     updateSettings: jest.fn(),
     seekTo: jest.fn(),
@@ -220,6 +221,7 @@ describe('useChapter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTtsState.mockReturnValue('idle');
     // Saved positions live in MMKV, which persists between tests.
     MMKVStorage.clearAll();
     cache = createCache();
@@ -383,6 +385,32 @@ describe('useChapter', () => {
     expect(result.current.session.nextChapter?.id).toBe(3);
     expect(actions.markChapterRead).toHaveBeenCalledWith(1);
     await waitFor(() => expect(mockInsertHistory).toHaveBeenCalledWith(2));
+  });
+
+  it('a finished read-aloud queue advances one chapter only', async () => {
+    mockReaderSettings.mockReturnValue({
+      ...initialChapterReaderSettings,
+      tts: { ...initialChapterReaderSettings.tts, autoPageAdvance: true },
+      setChapterReaderSettings: jest.fn(),
+    });
+    const { post, result, rerender, sent } = setup();
+    await waitFor(() =>
+      expect(result.current.session.chapters).toHaveLength(3),
+    );
+    mockTtsState.mockReturnValue('completed');
+    rerender({});
+    expect(sent('go-to').map(m => m.location.chapterId)).toEqual([2]);
+    // The next chapter comes on screen while the queue still reads completed.
+    post({
+      type: 'relocate',
+      chapterId: 2,
+      fraction: 0,
+      endFraction: 0.1,
+      atStart: true,
+      atEnd: false,
+    });
+    rerender({});
+    expect(sent('go-to').map(m => m.location.chapterId)).toEqual([2]);
   });
 
   it('one chapter at a time, a chapter counts as read from 97% only', async () => {

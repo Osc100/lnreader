@@ -5,6 +5,7 @@ import { buildReaderStyles } from '../../src/screens/reader/engine/styles';
 import { stopAutoScroll } from './autoscroll';
 import { SPREAD_FILL_CLASS, SPREAD_FILLED_CLASS } from './content';
 import { onSectionLoad } from './sectionDocument';
+import { followSearch } from './search';
 import { anchorTo, goTo, onRelocate, updateMarginals } from './position';
 import { currentLocation, type ReaderState } from './state';
 import type { FoliatePaginator, RelocateDetail } from './types';
@@ -27,9 +28,10 @@ export const createPaginator = (state: ReaderState) => {
   state.appliedStyles = '';
   state.root.append(paginator);
   applyLayout(state);
-  paginator.addEventListener('relocate', event =>
-    onRelocate(state, (event as CustomEvent<RelocateDetail>).detail),
-  );
+  paginator.addEventListener('relocate', event => {
+    onRelocate(state, (event as CustomEvent<RelocateDetail>).detail);
+    followSearch(state);
+  });
   // Every render replaces the footers; fill them again.
   paginator.addEventListener('stabilized', () => updateMarginals(state));
   paginator.addEventListener('load', event =>

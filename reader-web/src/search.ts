@@ -49,6 +49,8 @@ export const createSearch = () => {
 
   return {
     clear,
+    query: () => query,
+    document: () => doc,
     currentRange: (): Range | undefined => ranges[current],
     run: (target: Document, text: string, from?: Range): SearchState => {
       clear();
@@ -94,6 +96,20 @@ export const showSearch = (state: ReaderState, result: SearchState) => {
   if (range && state.paginator) {
     void anchorTo(state, state.paginator, range);
   }
+  state.bridge.send({ type: 'search-result', ...result });
+};
+
+/**
+ * Matches belong to one chapter's document: once another chapter is the one on
+ * screen, search that one instead, without moving the page.
+ */
+export const followSearch = (state: ReaderState) => {
+  const query = state.search.query();
+  const doc = primaryDocument(state);
+  if (!query.trim() || !doc || doc === state.search.document()) {
+    return;
+  }
+  const result = state.search.run(doc, query, state.location?.range);
   state.bridge.send({ type: 'search-result', ...result });
 };
 

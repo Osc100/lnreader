@@ -503,10 +503,18 @@ export default function useChapter(
     }
   }, [send, ttsProgress]);
 
+  // Opening the next chapter changes the neighbours while the state still
+  // reads completed; each finished queue advances only once.
+  const ttsCompletionHandledRef = useRef(false);
   useEffect(() => {
     if (ttsState !== 'completed') {
+      ttsCompletionHandledRef.current = false;
       return;
     }
+    if (ttsCompletionHandledRef.current) {
+      return;
+    }
+    ttsCompletionHandledRef.current = true;
     send({ type: 'tts-stop' });
     const next = neighbours.nextChapter;
     if (readerSettings.tts?.autoPageAdvance && next) {
