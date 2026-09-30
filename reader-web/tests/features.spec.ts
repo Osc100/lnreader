@@ -60,6 +60,35 @@ test.describe('search', () => {
     expect((await messages(page, 'search-result')).pop()?.current).toBe(1);
   });
 
+  test('follows the chapter on screen instead of keeping old matches', async ({
+    page,
+  }) => {
+    const needles = (n: number, count: number) =>
+      chapterHtml(n, 30).replace(/paragraph (\d+)\./g, (match, i) =>
+        Number(i) <= count * 7 && Number(i) % 7 === 0
+          ? `${match} Needle here.`
+          : match,
+      );
+    await openReader(page, {
+      chapters: { 1: { html: needles(1, 2) }, 2: { html: needles(2, 3) } },
+      preferences: { flow: 'scrolled', continuousChapters: true },
+    });
+    await send(page, { type: 'search', query: 'needle' });
+    expect(await waitForMessage(page, 'search-result')).toMatchObject({
+      total: 2,
+    });
+    await clearMessages(page);
+    await send(page, {
+      type: 'go-to',
+      location: { chapterId: 2, fraction: 0 },
+    });
+    await settle(page, 800);
+    expect((await messages(page, 'search-result')).pop()).toMatchObject({
+      query: 'needle',
+      total: 3,
+    });
+  });
+
   test('clearing removes the highlights', async ({ page }) => {
     await openReader(page, { chapters: { 1: { html: chapter(2) } } });
     await send(page, { type: 'search', query: 'needle' });
