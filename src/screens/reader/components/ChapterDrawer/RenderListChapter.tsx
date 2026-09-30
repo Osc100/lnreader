@@ -1,19 +1,18 @@
 import React from 'react';
-import { View, Pressable, TextStyle, StyleProp, ViewStyle } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Column } from '@expo/ui/jetpack-compose';
+import {
+  background,
+  clickable,
+  defaultMinSize,
+  fillMaxWidth,
+  padding,
+} from '@expo/ui/jetpack-compose/modifiers';
+import { AppText } from '@components';
 import { ChapterInfo } from '@database/types';
 import { ThemeColors } from '@theme/types';
 
-type Styles = {
-  chapterCtn: StyleProp<ViewStyle>;
-  drawerElementContainer: StyleProp<ViewStyle>;
-  chapterNameCtn: StyleProp<TextStyle>;
-  releaseDateCtn: StyleProp<TextStyle>;
-};
-
 type Props = {
   item: ChapterInfo;
-  styles: Styles;
   theme: ThemeColors;
   chapterId: number;
   /** Takes the chapter so the caller can pass a stable handler. */
@@ -25,62 +24,50 @@ type Props = {
  * re-rendering: the chapter list is re-created whenever reading progress is
  * written, which happens continuously while a chapter is open.
  */
-const RenderListChapter = ({
-  item,
-  styles,
-  theme,
-  onPress,
-  chapterId,
-}: Props) => {
+const RenderListChapter = ({ item, theme, onPress, chapterId }: Props) => {
   const isCurrentChapter = item.id === chapterId;
 
   return (
-    <View
-      style={[
-        styles.drawerElementContainer,
-        isCurrentChapter && {
-          backgroundColor: theme.secondaryContainer,
-        },
+    <Column
+      verticalArrangement="center"
+      modifiers={[
+        fillMaxWidth(),
+        padding(0, 2, 0, 2),
+        defaultMinSize({ minHeight: 48 }),
+        ...(isCurrentChapter ? [background(theme.secondaryContainer)] : []),
+        clickable(() => onPress(item)),
+        padding(12, 10, 12, 10),
       ]}
     >
-      <Pressable
-        android_ripple={{ color: theme.rippleColor }}
-        onPress={() => onPress(item)}
-        style={styles.chapterCtn}
+      <AppText
+        maxLines={1}
+        variant="bodyMedium"
+        color={
+          isCurrentChapter
+            ? theme.onSecondaryContainer
+            : item.unread
+            ? theme.onSurface
+            : theme.outline
+        }
+        modifiers={[padding(0, 0, 0, 2)]}
       >
-        <Text
-          numberOfLines={1}
-          style={[
-            styles.chapterNameCtn,
-            {
-              color: isCurrentChapter
-                ? theme.onSecondaryContainer
-                : item.unread
-                ? theme.onSurface
-                : theme.outline,
-            },
-          ]}
+        {item.name}
+      </AppText>
+      {item.releaseTime ? (
+        <AppText
+          variant="bodySmall"
+          color={
+            isCurrentChapter
+              ? theme.onSecondaryContainer
+              : item.unread
+              ? theme.onSurfaceVariant
+              : theme.outline
+          }
         >
-          {item.name}
-        </Text>
-        {item.releaseTime ? (
-          <Text
-            style={[
-              styles.releaseDateCtn,
-              {
-                color: isCurrentChapter
-                  ? theme.onSecondaryContainer
-                  : item.unread
-                  ? theme.onSurfaceVariant
-                  : theme.outline,
-              },
-            ]}
-          >
-            {item.releaseTime}
-          </Text>
-        ) : null}
-      </Pressable>
-    </View>
+          {item.releaseTime}
+        </AppText>
+      ) : null}
+    </Column>
   );
 };
 

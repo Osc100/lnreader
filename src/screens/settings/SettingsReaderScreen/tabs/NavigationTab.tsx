@@ -1,12 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { TextInput } from 'react-native-paper';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useWindowDimensions } from 'react-native';
+import { Column } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, padding } from '@expo/ui/jetpack-compose/modifiers';
 import defaultTo from 'lodash-es/defaultTo';
-import { useTheme, useChapterGeneralSettings } from '@hooks/persisted';
+import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 import { getString } from '@i18n/translations';
-import { List, Button } from '@components/index';
-import SettingSwitch from '../../components/SettingSwitch';
+import { List, Button, SwitchItem, TextInput } from '@components/index';
+import VolumeUpIcon from '@expo/material-symbols/volume_up.xml';
+import HeightIcon from '@expo/material-symbols/height.xml';
+import SwipeLeftIcon from '@expo/material-symbols/swipe_left.xml';
+import TouchAppIcon from '@expo/material-symbols/touch_app.xml';
+import AllInclusiveIcon from '@expo/material-symbols/all_inclusive.xml';
+import AutoplayIcon from '@expo/material-symbols/autoplay.xml';
 
 const NavigationTab: React.FC = () => {
   const theme = useTheme();
@@ -15,13 +20,12 @@ const NavigationTab: React.FC = () => {
     volumeButtonsOffset = null,
     verticalSeekbar = true,
     swipeGestures = false,
-    pageReader = false,
-    pageReaderInvertVolumeButtons = false,
-    pageReaderDisableAnimation = false,
     autoScroll = false,
     autoScrollInterval = 10,
     autoScrollOffset = null,
     tapToScroll = false,
+    continuousChapters = true,
+    pageReader = false,
     setChapterGeneralSettings,
   } = useChapterGeneralSettings();
 
@@ -31,17 +35,21 @@ const NavigationTab: React.FC = () => {
     autoScrollInterval === 10 && autoScrollOffset === null;
 
   return (
-    <BottomSheetScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.section}>
+    <Column modifiers={[fillMaxWidth()]}>
+      <Column modifiers={[fillMaxWidth()]}>
         <List.SubHeader theme={theme}>Navigation Controls</List.SubHeader>
-        <SettingSwitch
-          label={getString('readerScreen.bottomSheet.volumeButtonsScroll')}
+        {/* Pages turn by taps and the volume keys; scrolling-only options are off. */}
+        <SwitchItem
+          label={getString(
+            pageReader
+              ? 'readerScreen.bottomSheet.volumeButtonsTurnPages'
+              : 'readerScreen.bottomSheet.volumeButtonsScroll',
+          )}
+          icon={VolumeUpIcon}
           description={getString(
-            'readerScreen.bottomSheet.volumeButtonsScrollDescription',
+            pageReader
+              ? 'readerScreen.bottomSheet.volumeButtonsTurnPagesDescription'
+              : 'readerScreen.bottomSheet.volumeButtonsScrollDescription',
           )}
           value={useVolumeButtons}
           onPress={() =>
@@ -49,13 +57,12 @@ const NavigationTab: React.FC = () => {
           }
           theme={theme}
         />
-        {useVolumeButtons && (
-          <View style={styles.inputContainer}>
+        {useVolumeButtons && !pageReader && (
+          <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
             <TextInput
               label={getString('readerSettings.volumeButtonOffset')}
-              mode="outlined"
-              keyboardType="numeric"
-              defaultValue={defaultTo(
+              keyboardType="number"
+              value={defaultTo(
                 volumeButtonsOffset
                   ? Math.round(volumeButtonsOffset / screenHeight)
                   : null,
@@ -70,13 +77,12 @@ const NavigationTab: React.FC = () => {
                   });
                 }
               }}
-              style={styles.textInput}
-              theme={{ colors: { ...theme } }}
             />
-          </View>
+          </Column>
         )}
-        <SettingSwitch
+        <SwitchItem
           label={getString('readerScreen.bottomSheet.verticalSeekbar')}
+          icon={HeightIcon}
           description={getString(
             'readerScreen.bottomSheet.verticalSeekbarDescription',
           )}
@@ -86,21 +92,30 @@ const NavigationTab: React.FC = () => {
           }
           theme={theme}
         />
-        <SettingSwitch
+        <SwitchItem
           label={getString('readerScreen.bottomSheet.swipeGestures')}
+          icon={SwipeLeftIcon}
           description={getString(
             'readerScreen.bottomSheet.swipeGesturesDescription',
           )}
           value={swipeGestures}
+          disabled={pageReader}
           onPress={() =>
             setChapterGeneralSettings({ swipeGestures: !swipeGestures })
           }
           theme={theme}
         />
-        <SettingSwitch
-          label={getString('readerScreen.bottomSheet.tapToScroll')}
+        <SwitchItem
+          label={getString(
+            pageReader
+              ? 'readerScreen.bottomSheet.tapToTurnPages'
+              : 'readerScreen.bottomSheet.tapToScroll',
+          )}
+          icon={TouchAppIcon}
           description={getString(
-            'readerScreen.bottomSheet.tapToScrollDescription',
+            pageReader
+              ? 'readerScreen.bottomSheet.tapToTurnPagesDescription'
+              : 'readerScreen.bottomSheet.tapToScrollDescription',
           )}
           value={tapToScroll}
           onPress={() =>
@@ -108,74 +123,43 @@ const NavigationTab: React.FC = () => {
           }
           theme={theme}
         />
-      </View>
-
-      <View style={styles.section}>
-        <List.SubHeader theme={theme}>Reading Mode</List.SubHeader>
-        <SettingSwitch
-          label={getString('readerScreen.bottomSheet.pageReader')}
-          description={getString(
-            'readerScreen.bottomSheet.pageReaderDescription',
-          )}
-          value={pageReader}
-          onPress={() => setChapterGeneralSettings({ pageReader: !pageReader })}
+        <SwitchItem
+          label={getString('readerSettings.continuousChapters')}
+          icon={AllInclusiveIcon}
+          description={getString('readerSettings.continuousChaptersDesc')}
+          value={continuousChapters}
+          disabled={pageReader}
+          onPress={() =>
+            setChapterGeneralSettings({
+              continuousChapters: !continuousChapters,
+            })
+          }
           theme={theme}
         />
-        {pageReader && (
-          <>
-            <SettingSwitch
-              label={getString('readerScreen.bottomSheet.invertVolumeButtons')}
-              description={getString(
-                'readerScreen.bottomSheet.invertVolumeButtonsDescription',
-              )}
-              value={pageReaderInvertVolumeButtons}
-              onPress={() =>
-                setChapterGeneralSettings({
-                  pageReaderInvertVolumeButtons: !pageReaderInvertVolumeButtons,
-                })
-              }
-              theme={theme}
-            />
-            <SettingSwitch
-              label={getString(
-                'readerScreen.bottomSheet.disablePageTransitions',
-              )}
-              description={getString(
-                'readerScreen.bottomSheet.disablePageTransitionsDescription',
-              )}
-              value={pageReaderDisableAnimation}
-              onPress={() =>
-                setChapterGeneralSettings({
-                  pageReaderDisableAnimation: !pageReaderDisableAnimation,
-                })
-              }
-              theme={theme}
-            />
-          </>
-        )}
-      </View>
+      </Column>
 
-      <View style={styles.section}>
+      <Column modifiers={[fillMaxWidth()]}>
         <List.SubHeader theme={theme}>
           {getString('readerScreen.bottomSheet.autoscroll')}
         </List.SubHeader>
-        <SettingSwitch
+        <SwitchItem
           label={getString('readerScreen.bottomSheet.autoscroll')}
+          icon={AutoplayIcon}
           description={getString(
             'readerScreen.bottomSheet.autoscrollDescription',
           )}
           value={autoScroll}
+          disabled={pageReader}
           onPress={() => setChapterGeneralSettings({ autoScroll: !autoScroll })}
           theme={theme}
         />
-        {autoScroll && (
+        {autoScroll && !pageReader && (
           <>
-            <View style={styles.inputContainer}>
+            <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
               <TextInput
                 label={getString('readerSettings.autoScrollInterval')}
-                mode="outlined"
-                keyboardType="numeric"
-                defaultValue={defaultTo(autoScrollInterval, 10).toString()}
+                keyboardType="number"
+                value={defaultTo(autoScrollInterval, 10).toString()}
                 onChangeText={text => {
                   if (text) {
                     setChapterGeneralSettings({
@@ -183,16 +167,13 @@ const NavigationTab: React.FC = () => {
                     });
                   }
                 }}
-                style={styles.textInput}
-                theme={{ colors: { ...theme } }}
               />
-            </View>
-            <View style={styles.inputContainer}>
+            </Column>
+            <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
               <TextInput
                 label={getString('readerSettings.autoScrollOffset')}
-                mode="outlined"
-                keyboardType="numeric"
-                defaultValue={defaultTo(
+                keyboardType="number"
+                value={defaultTo(
                   autoScrollOffset,
                   Math.round(screenHeight),
                 ).toString()}
@@ -203,58 +184,24 @@ const NavigationTab: React.FC = () => {
                     });
                   }
                 }}
-                style={styles.textInput}
-                theme={{ colors: { ...theme } }}
               />
-            </View>
+            </Column>
             {!areAutoScrollSettingsDefault && (
-              <View style={styles.buttonContainer}>
+              <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
                 <Button
-                  style={styles.button}
                   title={getString('common.reset')}
                   onPress={() => {
                     setChapterGeneralSettings({ autoScrollInterval: 10 });
                     setChapterGeneralSettings({ autoScrollOffset: null });
                   }}
                 />
-              </View>
+              </Column>
             )}
           </>
         )}
-      </View>
-
-      <View style={styles.bottomSpacing} />
-    </BottomSheetScrollView>
+      </Column>
+    </Column>
   );
 };
 
 export default NavigationTab;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 24,
-  },
-  section: {
-    marginVertical: 8,
-  },
-  inputContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  textInput: {
-    fontSize: 14,
-  },
-  buttonContainer: {
-    marginHorizontal: 16,
-    marginVertical: 8,
-  },
-  button: {
-    marginVertical: 8,
-  },
-  bottomSpacing: {
-    height: 24,
-  },
-});
