@@ -1,12 +1,11 @@
 import { StyleSheet } from 'react-native';
-import React, { useEffect } from 'react';
-import { FAB } from 'react-native-paper';
+import React, { useEffect, useOptimistic, useTransition } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
 
-import { Appbar, EmptyView, SafeAreaView } from '@components/index';
+import { AppHost, Appbar, EmptyView, Fab, Screen } from '@components/index';
 import AddCategoryModal from './components/AddCategoryModal';
 
 import { updateCategoryOrderInDb } from '@database/queries/CategoryQueries';
@@ -16,17 +15,15 @@ import { getString } from '@i18n/translations';
 
 import CategoryCard from './components/CategoryCard';
 import CategorySkeletonLoading from './components/CategorySkeletonLoading';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLibraryContext } from '@components/Context/LibraryContext';
 import { ExtendedCategory } from '@screens/library/hooks/useLibrary';
+import AddIcon from '@expo/material-symbols/add.xml';
 
 const CategoriesScreen = () => {
   const { categories, setCategories, refreshCategories, isLoading } =
     useLibraryContext();
   const theme = useTheme();
   const { goBack } = useNavigation();
-
-  const { bottom, right } = useSafeAreaInsets();
 
   const {
     value: categoryModalVisible,
@@ -46,13 +43,22 @@ const CategoriesScreen = () => {
     return categories;
   }, [categories]);
 
+  // The dropped order shows at once and stays until the saved order replaces
+  // it, so the list never renders the old order in between.
+  const [optimisticCategories, setOptimisticCategories] =
+    useOptimistic(userCategories);
+  const [, startTransition] = useTransition();
+
   const onDragEnd = ({ data }: { data: ExtendedCategory[] }) => {
     if (!categories || categories.length === 0) {
       return;
     }
 
-    setCategories(data);
-    updateCategoryOrderInDb(data);
+    startTransition(async () => {
+      setOptimisticCategories(data);
+      await updateCategoryOrderInDb(data);
+      startTransition(() => setCategories(data));
+    });
   };
 
   const renderItem = ({
@@ -69,47 +75,56 @@ const CategoriesScreen = () => {
   );
 
   return (
-    <SafeAreaView excludeTop>
-      <Appbar
-        title={getString('categories.header')}
-        handleGoBack={goBack}
-        theme={theme}
-      />
+    <Screen
+      topBar={
+        <Appbar
+          title={getString('categories.header')}
+          handleGoBack={goBack}
+          theme={theme}
+        />
+      }
+      list={
+        isLoading ? undefined : (
+          <DraggableFlatList
+            data={optimisticCategories}
+            contentContainerStyle={styles.contentCtn}
+            renderItem={renderItem}
+            keyExtractor={item => item.id.toString()}
+            onDragEnd={onDragEnd}
+            activationDistance={10}
+            autoscrollSpeed={100}
+            ListEmptyComponent={
+              <AppHost style={styles.empty}>
+                <EmptyView
+                  icon="Σ(ಠ_ಠ)"
+                  description={getString('categories.emptyMsg')}
+                  theme={theme}
+                />
+              </AppHost>
+            }
+          />
+        )
+      }
+      floatingAction={
+        <Fab
+          extended
+          label={getString('common.add')}
+          onPress={showCategoryModal}
+          icon={AddIcon}
+        />
+      }
+      overlays={
+        <AddCategoryModal
+          visible={categoryModalVisible}
+          closeModal={closeCategoryModal}
+          onSuccess={refreshCategories}
+        />
+      }
+    >
       {isLoading ? (
         <CategorySkeletonLoading width={360.7} height={89.5} theme={theme} />
-      ) : (
-        <DraggableFlatList
-          data={userCategories}
-          contentContainerStyle={styles.contentCtn}
-          renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
-          onDragEnd={onDragEnd}
-          activationDistance={10}
-          autoscrollSpeed={100}
-          ListEmptyComponent={
-            <EmptyView
-              icon="Σ(ಠ_ಠ)"
-              description={getString('categories.emptyMsg')}
-              theme={theme}
-            />
-          }
-        />
-      )}
-      <FAB
-        style={[styles.fab, { backgroundColor: theme.primary, right, bottom }]}
-        color={theme.onPrimary}
-        label={getString('common.add')}
-        uppercase={false}
-        onPress={showCategoryModal}
-        icon={'plus'}
-      />
-
-      <AddCategoryModal
-        visible={categoryModalVisible}
-        closeModal={closeCategoryModal}
-        onSuccess={refreshCategories}
-      />
-    </SafeAreaView>
+      ) : null}
+    </Screen>
   );
 };
 
@@ -121,10 +136,7 @@ const styles = StyleSheet.create({
     paddingBottom: 270,
     paddingVertical: 16,
   },
-  fab: {
-    bottom: 16,
-    margin: 16,
-    position: 'absolute',
-    right: 0,
+  empty: {
+    flex: 1,
   },
 });
