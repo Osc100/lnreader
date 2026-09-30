@@ -149,6 +149,9 @@ if (root && status) {
     }
   });
   window.lnReader = { receive: message => handle(state, message) };
+  // Tests inspect the paginator through this.
+  (window as Window & { lnReaderInstance?: ReaderState }).lnReaderInstance =
+    state;
   window.addEventListener('error', event =>
     bridge.send({ type: 'error', message: String(event.message) }),
   );

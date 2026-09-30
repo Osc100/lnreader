@@ -117,3 +117,6 @@ ios/
 
 # Generated web reader bundle (scripts/build-reader.mjs)
 assets/reader/app/
+# Playwright output (reader-web tests)
+/test-results/
+/playwright-report/
