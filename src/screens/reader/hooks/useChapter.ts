@@ -54,6 +54,10 @@ import { loadChapterHtml, readPluginFile } from '../utils/chapterContent';
 import { readerCssVariables } from '../utils/cssVariables';
 import { loadAdjacentPage } from '../utils/pages';
 import { startFraction, writePosition } from '../utils/positions';
+import {
+  MAX_AUTO_SCROLL_INTERVAL,
+  MIN_AUTO_SCROLL_INTERVAL,
+} from '@utils/constants/readerConstants';
 import useCustomCode from '../components/Hooks/useCustomCode';
 import useTextModifications from '../components/Hooks/useTextModifications';
 
@@ -380,7 +384,9 @@ export default function useChapter(
       const target =
         direction === 'NEXT' ? neighbours.nextChapter : neighbours.prevChapter;
       if (target) {
-        openChapter(target);
+        // Read on from the start: a glimpse of it from the end of this one
+        // can have saved a position part way in.
+        openChapter(target, direction === 'NEXT' ? 0 : undefined);
       } else {
         send({
           type: 'turn',
@@ -771,7 +777,7 @@ export default function useChapter(
     pageReaderInvertVolumeButtons,
     autoScroll,
     autoScrollInterval,
-    autoScrollOffset,
+    autoScrollSmooth = false,
     pageReader,
   } = generalSettings;
   useEffect(() => {
@@ -810,9 +816,14 @@ export default function useChapter(
   // Starts once the first chapter is on screen.
   // Auto-scroll is a scrolling feature; pages turn by taps and the volume keys.
   const scrollInterval =
-    autoScroll && !pageReader ? Math.max(1, autoScrollInterval) : 0;
-  const scrollDistance =
-    autoScrollOffset ?? Math.round(Dimensions.get('window').height);
+    autoScroll && !pageReader
+      ? Math.min(
+          MAX_AUTO_SCROLL_INTERVAL,
+          Math.max(MIN_AUTO_SCROLL_INTERVAL, autoScrollInterval),
+        )
+      : 0;
+  // A screen per interval; the interval alone sets the speed.
+  const scrollDistance = Math.round(Dimensions.get('window').height);
   const onScreen = position !== undefined;
   useEffect(() => {
     if (onScreen) {
@@ -820,9 +831,10 @@ export default function useChapter(
         type: 'auto-scroll',
         interval: scrollInterval,
         distance: scrollDistance,
+        smooth: autoScrollSmooth,
       });
     }
-  }, [onScreen, scrollInterval, scrollDistance, send]);
+  }, [onScreen, scrollInterval, scrollDistance, autoScrollSmooth, send]);
 
   return {
     hidden,

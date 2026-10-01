@@ -614,6 +614,8 @@ export interface StringMap {
   'readerScreen.searchPlaceholder': 'string';
   'readerSettings.autoScrollInterval': 'string';
   'readerSettings.autoScrollOffset': 'string';
+  'readerSettings.autoScrollSmooth': 'string';
+  'readerSettings.autoScrollSmoothDesc': 'string';
   'readerSettings.backgroundColor': 'string';
   'readerSettings.backgroundColorModal': 'string';
   'readerSettings.clearCustomCSS': 'string';
@@ -653,6 +655,7 @@ export interface StringMap {
   'readerSettings.animationCurl': 'string';
   'readerSettings.continuousChapters': 'string';
   'readerSettings.continuousChaptersDesc': 'string';
+  'readerSettings.disabledInPagedMode': 'string';
   'readerSettings.chapterPosition': 'string';
   'readerSettings.pageOf': 'string';
   'readerSettings.readAloud': 'string';

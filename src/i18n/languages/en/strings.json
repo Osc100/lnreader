@@ -721,6 +721,8 @@
   "readerSettings": {
     "autoScrollInterval": "Scroll interval (seconds)",
     "autoScrollOffset": "Scroll offset (screen heights)",
+    "autoScrollSmooth": "Smooth scrolling",
+    "autoScrollSmoothDesc": "Glide at a steady speed instead of jumping each interval",
     "backgroundColor": "Background color",
     "backgroundColorModal": "Background color",
     "clearCustomCSS": "Reset your custom CSS?",
@@ -760,6 +762,7 @@
     "animationCurl": "Curl",
     "continuousChapters": "Continuous chapters",
     "continuousChaptersDesc": "Chapters flow into each other without stopping",
+    "disabledInPagedMode": "Disabled because page mode is on",
     "chapterPosition": "Chapter %{current} of %{total}",
     "pageOf": "%{page} / %{pages}",
     "readAloud": "Read aloud",

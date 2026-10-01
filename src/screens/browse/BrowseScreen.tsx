@@ -124,7 +124,7 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
           renderPage={i => renderScene({ route: routes[i] })}
           showCounts
           swipeEnabled={false}
-          segmented
+          fixed
         />
       }
     />

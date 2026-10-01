@@ -27,7 +27,9 @@ import { CHAPTER_BATCH_SIZE } from '@hooks/persisted/useNovel/store-helper/boots
 interface JumpToChapterModalProps {
   hideModal: () => void;
   modalVisible: boolean;
-  navigation: NovelScreenProps['navigation'];
+  navigation?: NovelScreenProps['navigation'];
+  /** Opens a chapter in place of navigating to the reader. */
+  onOpenChapter?: (chapter: ChapterInfo) => void;
   novel: NovelInfo;
   chapterListRef: React.RefObject<ComposeListHandle | null>;
 }
@@ -71,6 +73,7 @@ const JumpToChapterModal = ({
   hideModal,
   modalVisible,
   navigation,
+  onOpenChapter,
   novel,
   chapterListRef,
 }: JumpToChapterModalProps) => {
@@ -108,7 +111,11 @@ const JumpToChapterModal = ({
 
   const navigateToChapter = (chap: ChapterInfo) => {
     onDismiss();
-    navigation.navigate('Chapter', {
+    if (onOpenChapter) {
+      onOpenChapter(chap);
+      return;
+    }
+    navigation?.navigate('Chapter', {
       novel: novel,
       chapter: chap,
     });
@@ -322,7 +329,7 @@ const JumpToChapterModal = ({
           {getString('novelScreen.jumpToChapterModal.description')}
         </Dialog.Description>
       </Dialog.Header>
-      <Dialog.ScrollArea>
+      <Dialog.ScrollArea fixed>
         <SwitchItem
           description={getString(
             'novelScreen.jumpToChapterModal.searchByNameDescription',

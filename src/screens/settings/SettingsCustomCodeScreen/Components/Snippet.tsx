@@ -38,7 +38,9 @@ function Snippet({
   return (
     <Card
       colors={{
-        containerColor: theme.secondaryContainer,
+        // Not a primary-tinted container: some themes (Midnight Dusk) make it
+        // the same colour as an enabled switch's track.
+        containerColor: theme.surfaceContainerHigh,
         contentColor: theme.onSurface,
       }}
       modifiers={[fillMaxWidth(), padding(16, 4, 16, 4)]}

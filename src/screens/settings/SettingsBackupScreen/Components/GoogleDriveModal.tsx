@@ -212,7 +212,7 @@ function RestoreBackup({
 
   return (
     <>
-      <Dialog.ScrollArea>
+      <Dialog.ScrollArea fixed>
         {backupList.length
           ? backupList.map(item => (
               <Button

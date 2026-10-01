@@ -1,16 +1,18 @@
 import { useCallback, useState, useMemo } from 'react';
 import { Column } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { fillMaxWidth, height } from '@expo/ui/jetpack-compose/modifiers';
 
 import { getString } from '@i18n/translations';
 
 import { Checkbox, SortItem } from '@components/Checkbox/Checkbox';
-import { BottomSheet, Dialog, List, TopTabBar } from '@components';
+import { BottomSheet, ComposeTabPager, Dialog, List } from '@components';
 
 import { useNovelSettings } from '@hooks/persisted/useNovelSettings';
 import { useNovelValue } from '@screens/novel/NovelContext';
 import ChevronRightIcon from '@expo/material-symbols/chevron_right.xml';
 import { ThemeColors } from '@theme/types';
+
+const SHEET_HEIGHT = 290;
 
 interface ChaptersSettingsSheetProps {
   visible: boolean;
@@ -190,13 +192,18 @@ const ChaptersSettingsSheet = ({
 
   return (
     <>
-      <BottomSheet visible={visible} onDismiss={onDismiss}>
-        <TopTabBar
-          tabs={routes.map((route, i) => ({ key: i, label: route.title }))}
-          selectedKey={index}
-          onSelect={setIndex}
-        />
-        {renderScene({ route: routes[index] })}
+      <BottomSheet visible={visible} onDismiss={onDismiss} scrollable={false}>
+        {/* A fixed height, as before, so switching tabs doesn't resize it. */}
+        <Column modifiers={[fillMaxWidth(), height(SHEET_HEIGHT)]}>
+          <ComposeTabPager
+            tabs={routes.map((route, i) => ({ key: i, label: route.title }))}
+            index={index}
+            onIndexChange={setIndex}
+            swipeEnabled={false}
+            renderPage={page => renderScene({ route: routes[page] })}
+            fixed
+          />
+        </Column>
       </BottomSheet>
       {scanlators.length > 0 && (
         <Dialog.Root

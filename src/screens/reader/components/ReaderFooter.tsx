@@ -46,7 +46,7 @@ import {
 } from './ReaderAppbar';
 import { StyleSheet } from 'react-native';
 
-const bottomBarHeight = (verticalSeekbar: boolean) =>
+export const bottomBarHeight = (verticalSeekbar: boolean) =>
   verticalSeekbar ? BAR_HEIGHT : 128;
 
 const SCRUB_SEEK_MS = 120;
@@ -196,6 +196,7 @@ const ReaderFooter = ({
   const {
     pageReader,
     autoScroll,
+    continuousChapters,
     verticalSeekbar = true,
     setChapterGeneralSettings,
   } = useChapterGeneralSettings();
@@ -234,12 +235,14 @@ const ReaderFooter = ({
   );
   const tools = (
     <>
-      <IconButtonV2
-        name={VerticalAlignTopIcon}
-        accessibilityLabel={getString('readerScreen.drawer.scrollToTop')}
-        onPress={() => seek(0)}
-        theme={theme}
-      />
+      {continuousChapters ? null : (
+        <IconButtonV2
+          name={VerticalAlignTopIcon}
+          accessibilityLabel={getString('readerScreen.drawer.scrollToTop')}
+          onPress={() => seek(0)}
+          theme={theme}
+        />
+      )}
       <IconButtonV2
         name={FormatListBulletedIcon}
         accessibilityLabel={getString('common.chapters')}
@@ -254,14 +257,15 @@ const ReaderFooter = ({
         onPress={() => setChapterGeneralSettings({ pageReader: !pageReader })}
         theme={theme}
       />
-      <IconButtonV2
-        name={SlowMotionVideoIcon}
-        accessibilityLabel={getString('readerScreen.bottomSheet.autoscroll')}
-        selected={autoScroll && !pageReader}
-        disabled={pageReader}
-        onPress={() => setChapterGeneralSettings({ autoScroll: !autoScroll })}
-        theme={theme}
-      />
+      {pageReader ? null : (
+        <IconButtonV2
+          name={SlowMotionVideoIcon}
+          accessibilityLabel={getString('readerScreen.bottomSheet.autoscroll')}
+          selected={autoScroll}
+          onPress={() => setChapterGeneralSettings({ autoScroll: !autoScroll })}
+          theme={theme}
+        />
+      )}
       <IconButtonV2
         name={TuneIcon}
         accessibilityLabel={getString('readerSettings.title')}

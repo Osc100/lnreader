@@ -76,7 +76,7 @@ const RepositoryCard: FC<RepositoryCardProps> = ({
   return (
     <Card
       colors={{
-        containerColor: theme.secondaryContainer,
+        containerColor: theme.surfaceContainerHigh,
         contentColor: theme.onSurface,
       }}
       modifiers={[fillMaxWidth(), padding(16, 4, 16, 4)]}

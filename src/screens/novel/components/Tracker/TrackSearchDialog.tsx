@@ -235,7 +235,7 @@ const TrackSearchDialog: React.FC<TrackSearchDialogProps> = ({
           }
         />
       </Dialog.Content>
-      <Dialog.ScrollArea>
+      <Dialog.ScrollArea fixed>
         {loading ? (
           <Box
             contentAlignment="center"

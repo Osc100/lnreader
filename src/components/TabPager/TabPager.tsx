@@ -10,35 +10,39 @@ import {
   fillMaxSize,
   fillMaxWidth,
   padding,
+  verticalScroll,
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
-import { useTheme } from '@hooks/persisted/useTheme';
 import AppHost from '../AppHost/AppHost';
-import { SegmentedControl } from '../SegmentedControl';
 import TopTabBar, { type TopTab } from '../TopTabBar/TopTabBar';
+import TabRow from '../TopTabBar/TabRow';
 
 export interface TabPagerProps {
   tabs: readonly TopTab<number>[];
   index: number;
   onIndexChange: (index: number) => void;
-  /** React Native content for the page at `index`, mounted on first visit. */
+  /** Content for the page at `index`, mounted on first visit. */
   renderPage: (index: number) => ReactNode;
   showCounts?: boolean;
   swipeEnabled?: boolean;
-  /** A full-width segmented control instead of chips, for a few fixed tabs. */
-  segmented?: boolean;
+  /** Material's fixed tab row instead of chips, for a few tabs that fit. */
+  fixed?: boolean;
 }
 
-const TabPager = ({
+type PagerProps = TabPagerProps & {
+  wrapPage: (content: ReactNode, key: number) => ReactNode;
+};
+
+const Pager = ({
   tabs,
   index,
   onIndexChange,
   renderPage,
   showCounts,
   swipeEnabled = true,
-  segmented = false,
-}: TabPagerProps) => {
-  const theme = useTheme();
+  fixed = false,
+  wrapPage,
+}: PagerProps) => {
   const pager = useRef<HorizontalPagerHandle>(null);
   const pagerIndex = useRef(index);
   const [visited, setVisited] = useState<ReadonlySet<number>>(
@@ -58,56 +62,78 @@ const TabPager = ({
     }
   }, [index]);
 
+  const Bar = fixed ? TabRow : TopTabBar;
   return (
-    <AppHost style={styles.fill}>
-      <Column modifiers={[fillMaxSize()]}>
-        {tabs.length && segmented ? (
-          <SegmentedControl
-            options={tabs.map(tab => ({
-              value: tab.key,
-              label:
-                showCounts && tab.count !== undefined
-                  ? `${tab.label}  ${tab.count}`
-                  : tab.label,
-            }))}
-            value={index}
-            onChange={onIndexChange}
-            theme={theme}
-            modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}
-          />
-        ) : tabs.length ? (
-          <TopTabBar
-            tabs={tabs}
-            selectedKey={index}
-            onSelect={onIndexChange}
-            showCounts={showCounts}
-          />
-        ) : null}
-        <HorizontalPager
-          ref={pager}
-          initialPage={index}
-          userScrollEnabled={swipeEnabled}
-          onCurrentPageChange={visit}
-          onSettledPageChange={page => {
-            if (pagerIndex.current !== page) {
-              pagerIndex.current = page;
-              onIndexChange(page);
-            }
-          }}
-          modifiers={[fillMaxWidth(), weight(1)]}
-        >
-          {tabs.map((tab, page) => (
-            <RNHostView key={tab.key}>
-              <View style={styles.fill}>
-                {visited.has(page) ? renderPage(page) : null}
-              </View>
-            </RNHostView>
-          ))}
-        </HorizontalPager>
-      </Column>
-    </AppHost>
+    <>
+      {tabs.length ? (
+        <Bar
+          tabs={tabs}
+          selectedKey={index}
+          onSelect={onIndexChange}
+          showCounts={showCounts}
+        />
+      ) : null}
+      <HorizontalPager
+        ref={pager}
+        initialPage={index}
+        userScrollEnabled={swipeEnabled}
+        onCurrentPageChange={visit}
+        onSettledPageChange={page => {
+          if (pagerIndex.current !== page) {
+            pagerIndex.current = page;
+            onIndexChange(page);
+          }
+        }}
+        modifiers={[fillMaxWidth(), weight(1)]}
+      >
+        {tabs.map((tab, page) =>
+          wrapPage(visited.has(page) ? renderPage(page) : null, tab.key),
+        )}
+      </HorizontalPager>
+    </>
   );
 };
+
+/** Pages of React Native content, filling the space it is given. */
+const TabPager = (props: TabPagerProps) => (
+  <AppHost style={styles.fill}>
+    <Column modifiers={[fillMaxSize()]}>
+      <Pager
+        {...props}
+        wrapPage={(content, key) => (
+          <RNHostView key={key}>
+            <View style={styles.fill}>{content}</View>
+          </RNHostView>
+        )}
+      />
+    </Column>
+  </AppHost>
+);
+
+/**
+ * Pages of Compose content inside a host, each scrolling on its own, so a
+ * sheet keeps its height and its tab row between tabs.
+ */
+export const ComposeTabPager = ({
+  bottomInset = 0,
+  ...props
+}: TabPagerProps & { bottomInset?: number }) => (
+  <Pager
+    {...props}
+    wrapPage={(content, key) => (
+      <Column
+        key={key}
+        modifiers={[
+          fillMaxSize(),
+          verticalScroll(),
+          padding(0, 0, 0, bottomInset + 16),
+        ]}
+      >
+        {content}
+      </Column>
+    )}
+  />
+);
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

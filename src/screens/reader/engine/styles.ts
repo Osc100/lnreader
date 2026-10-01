@@ -33,6 +33,10 @@ const variablesCss = (variables: Record<string, string>) => {
   return declarations.length ? `:root { ${declarations.join(' ')} }` : '';
 };
 
+// `@import url(...) ...;` or `@import "...";`, up to the closing semicolon.
+const IMPORT_RULE =
+  /@import\s+(?:url\((?:[^)"']|"[^"]*"|'[^']*')*\)|"[^"]*"|'[^']*')[^;]*;/gi;
+
 /**
  * Chapters come from many sites, so the typography is forced with
  * `!important` on text elements; images, tables and code keep theirs.
@@ -57,7 +61,15 @@ export const buildReaderStyles = (
   const textAlign = prefs.textAlign === 'start' ? 'start' : prefs.textAlign;
   const textBlocks = 'p, li, dd, dt, blockquote, div, span, font, td, th';
 
-  const before = `
+  // `@import` only counts at the very start of a stylesheet, and custom CSS
+  // goes at the end of one, so its imports (e.g. a web font) move to the top.
+  const imports: string[] = [];
+  const customCss = prefs.customCss.replace(IMPORT_RULE, rule => {
+    imports.push(rule);
+    return '';
+  });
+
+  const before = `${imports.join('\n')}
 ${fontFaceCss(prefs.fontFamily, assetsUri)}
 ${variablesCss(prefs.cssVariables)}
 img, svg, video, canvas { max-width: 100%; height: auto; }
@@ -89,10 +101,12 @@ html {
   -webkit-text-size-adjust: none;
   text-size-adjust: none;
 }
+/* The font isn't forced on body, so custom CSS can set it there, as before;
+   coming after the chapter's own styles, it still wins over theirs. */
 body {
   margin: 0 !important;
   padding: 0 !important;
-  ${family ? `font-family: ${family} !important;` : ''}
+  ${family ? `font-family: ${family};` : ''}
   line-height: ${prefs.lineHeight} !important;
   text-align: ${textAlign};
   overflow-wrap: break-word;
@@ -170,7 +184,7 @@ ${
     ? 'br + br, p:empty, div:empty { display: none !important; }'
     : ''
 }
-${prefs.customCss}
+${customCss}
 `;
 
   return { before, after };

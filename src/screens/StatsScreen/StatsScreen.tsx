@@ -180,7 +180,7 @@ const StatsScreen = () => {
           index={index}
           onIndexChange={setIndex}
           renderPage={i => renderScene({ route: routes[i] })}
-          segmented
+          fixed
         />
       }
     />

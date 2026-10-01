@@ -49,6 +49,7 @@ const ReaderTextAlignSelector: React.FC = () => {
         value={textAlign}
         onChange={value => setChapterReaderSettings({ textAlign: value })}
         theme={theme}
+        iconOnly
       />
     </Column>
   );

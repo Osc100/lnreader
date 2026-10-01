@@ -52,6 +52,8 @@ export interface ComposeListProps<T> {
   header?: ReactElement | readonly ReactElement[] | null;
   footer?: ReactElement | null;
   initialIndex?: number;
+  /** Where `initialIndex` sits: 0 at the top, 0.5 centred. */
+  initialViewPosition?: number;
   contentPadding?: { top?: number; bottom?: number; horizontal?: number };
   verticalSpacing?: number;
   estimatedItemSize?: number;
@@ -108,6 +110,7 @@ export function ComposeList<T>({
   header,
   footer,
   initialIndex,
+  initialViewPosition,
   contentPadding,
   verticalSpacing,
   estimatedItemSize,
@@ -216,7 +219,11 @@ export function ComposeList<T>({
           paddingBottom: contentPadding?.bottom,
           paddingHorizontal: contentPadding?.horizontal,
         }}
-        initialScrollIndex={initialIndex}
+        initialScrollIndex={
+          initialIndex !== undefined && initialViewPosition
+            ? { index: initialIndex, viewPosition: initialViewPosition }
+            : initialIndex
+        }
         estimatedItemSize={estimatedItemSize}
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}

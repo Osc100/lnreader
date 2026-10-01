@@ -1,3 +1,4 @@
+import { turn } from './position';
 import type { ReaderState } from './state';
 
 export const stopAutoScroll = (state: ReaderState) => {
@@ -9,6 +10,7 @@ export const setAutoScroll = (
   state: ReaderState,
   interval: number,
   distance?: number,
+  smooth = false,
 ) => {
   stopAutoScroll(state);
   const paginator = state.paginator;
@@ -19,10 +21,13 @@ export const setAutoScroll = (
     stopAutoScroll(state);
     state.bridge.send({ type: 'boundary', direction: 'next' });
   };
-  if (!paginator.scrolled) {
+  // Pages, or stepped scrolling as the old reader did: a jump each interval.
+  if (!paginator.scrolled || !smooth) {
     const timer = setInterval(() => {
       if (paginator.atEnd) {
         reachedEnd();
+      } else if (paginator.scrolled) {
+        void turn(state, 'next', distance || paginator.size);
       } else {
         state.sentTo = undefined;
         void paginator.next();

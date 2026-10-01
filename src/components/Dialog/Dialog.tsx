@@ -142,7 +142,14 @@ const DialogList = ({ children, testID }: DialogSectionProps) => (
   </Column>
 );
 
-const DialogScrollArea = ({ children, testID }: DialogSectionProps) => {
+const DialogScrollArea = ({
+  children,
+  testID,
+  fixed = false,
+}: DialogSectionProps & {
+  /** Keep the full height for content that changes, so the dialog doesn't jump. */
+  fixed?: boolean;
+}) => {
   const theme = useTheme();
   // Compose has no max-height modifier here: measure the content, then cap.
   const [contentHeight, setContentHeight] = useState<number>();
@@ -152,7 +159,9 @@ const DialogScrollArea = ({ children, testID }: DialogSectionProps) => {
       <Column
         modifiers={[
           fillMaxWidth(),
-          ...(contentHeight === undefined
+          ...(fixed
+            ? [height(MAX_SCROLL_AREA_HEIGHT)]
+            : contentHeight === undefined
             ? []
             : [height(Math.min(contentHeight, MAX_SCROLL_AREA_HEIGHT))]),
           verticalScroll(),
@@ -162,7 +171,9 @@ const DialogScrollArea = ({ children, testID }: DialogSectionProps) => {
           modifiers={[
             fillMaxWidth(),
             padding(8, 0, 8, 0),
-            onSizeChanged(measured => setContentHeight(measured.height)),
+            ...(fixed
+              ? []
+              : [onSizeChanged(measured => setContentHeight(measured.height))]),
           ]}
         >
           {children}

@@ -17,6 +17,8 @@ export interface BottomSheetProps {
   expanded?: boolean;
   /** Disable for lazy lists. */
   scrollable?: boolean;
+  /** Leave what's behind undimmed, e.g. a page whose colors are being set. */
+  transparentScrim?: boolean;
 }
 
 const BottomSheet = ({
@@ -26,6 +28,7 @@ const BottomSheet = ({
   children,
   expanded,
   scrollable = true,
+  transparentScrim = false,
 }: BottomSheetProps) => {
   const theme = useTheme();
   const { bottom } = useScreenInsets();
@@ -38,7 +41,7 @@ const BottomSheet = ({
       skipPartiallyExpanded={expanded}
       containerColor={theme.surfaceContainerLow}
       contentColor={theme.onSurface}
-      scrimColor={theme.backdrop}
+      scrimColor={transparentScrim ? 'transparent' : theme.backdrop}
     >
       <Column
         modifiers={[

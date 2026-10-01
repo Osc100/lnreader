@@ -61,7 +61,7 @@ const SetCategoryModal: React.FC<SetCategoryModalProps> = ({
   return (
     <Dialog.Root visible={visible} onDismiss={closeModal}>
       <Dialog.Title>{getString('categories.setCategories')}</Dialog.Title>
-      <Dialog.ScrollArea>
+      <Dialog.ScrollArea fixed>
         {categories.length ? (
           categories.map(item => (
             <Checkbox

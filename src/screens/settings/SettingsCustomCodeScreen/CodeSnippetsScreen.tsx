@@ -10,6 +10,7 @@ import SettingsReaderWebView from '../SettingsReaderScreen/components/SettingsRe
 import { CodeSnippetsScreenProps } from '@navigators/types';
 import NativeFile from '@modules/native-file';
 import * as DocumentPicker from 'expo-document-picker';
+import { useKeyboardHeight } from '@hooks/common/useKeyboardHeight';
 
 const routes = [
   { key: 'code', title: getString('common.code') },
@@ -34,6 +35,8 @@ const CodeSnippetsScreen: React.FC<CodeSnippetsScreenProps> = ({
   const [index, setIndex] = React.useState(0);
   const [exampleCode, setExampleCode] = React.useState<string>();
   const editorRef = React.useRef<SnippetEditorHandle>(null);
+  // Drags in the editor move the cursor and selection, not the page.
+  const editing = useKeyboardHeight() > 0;
 
   const renderScene = ({ route: r }: { route: (typeof routes)[number] }) => {
     switch (r.key) {
@@ -119,6 +122,8 @@ const CodeSnippetsScreen: React.FC<CodeSnippetsScreenProps> = ({
             setIndex(i);
           }}
           renderPage={i => renderScene({ route: routes[i] })}
+          swipeEnabled={!editing}
+          fixed
         />
       }
     />

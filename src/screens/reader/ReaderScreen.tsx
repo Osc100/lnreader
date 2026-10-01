@@ -1,30 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import { Box, Column, Row, Surface } from '@expo/ui/jetpack-compose';
-import {
-  clickable,
-  fillMaxHeight,
-  fillMaxSize,
-  fillMaxWidth,
-  height,
-  padding,
-  weight,
-  width,
-} from '@expo/ui/jetpack-compose/modifiers';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Column } from '@expo/ui/jetpack-compose';
+import { fillMaxSize } from '@expo/ui/jetpack-compose/modifiers';
 import { InteractionManager, Share, StyleSheet, View } from 'react-native';
-import { Drawer } from 'react-native-drawer-layout';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 
 import {
   useChapterGeneralSettings,
   useChapterReaderSettings,
-  useTheme,
 } from '@hooks/persisted';
 import { useBackHandler } from '@hooks/index';
 import { getString } from '@i18n/translations';
@@ -33,11 +16,16 @@ import { resolveUrl } from '@services/plugin/fetch';
 import { showToast } from '@utils/showToast';
 import KeepScreenAwake from './components/KeepScreenAwake';
 import ChapterDrawer from './components/ChapterDrawer';
+import JumpToChapterModal from '@screens/novel/components/JumpToChapterModal';
 import ChapterLoadingScreen from './ChapterLoadingScreen/ChapterLoadingScreen';
-import ReaderAppbar from './components/ReaderAppbar';
-import ReaderFooter, { ReaderSideSeekbar } from './components/ReaderFooter';
+import ReaderAppbar, { BAR_HEIGHT } from './components/ReaderAppbar';
+import ReaderFooter, {
+  ReaderSideSeekbar,
+  bottomBarHeight,
+} from './components/ReaderFooter';
 import ReaderTtsController from './components/ReaderTtsController';
 import ReaderBottomSheet from './components/ReaderBottomSheet/ReaderBottomSheet';
+import ReaderSidePanel from './components/ReaderSidePanel';
 import WebViewReader, {
   type ReaderTextAction,
 } from './components/WebViewReader';
@@ -46,23 +34,23 @@ import {
   useChapterContext,
   useReaderChromeHidden,
 } from './ChapterContext';
-import CloseIcon from '@expo/material-symbols/close.xml';
 import PublicIcon from '@expo/material-symbols/public.xml';
 import RefreshIcon from '@expo/material-symbols/refresh.xml';
 import {
   AppHost,
-  IconButtonV2,
-  AppText,
   ErrorScreenV2,
   OverlayHost,
   BottomSheet,
   Dialog,
   TextInput,
   useScreenInsets,
+  type ComposeListHandle,
 } from '@components';
 import { useWindowLayout } from '@hooks/common/useWindowLayout';
 
 const SIDE_PANEL_WIDTH = 400;
+
+const CHAPTERS_PANEL_WIDTH = 400;
 
 const Chapter = ({ route, navigation }: ChapterScreenProps) => (
   <ChapterContextProvider
@@ -74,9 +62,12 @@ const Chapter = ({ route, navigation }: ChapterScreenProps) => (
 );
 
 const ReaderDrawerLayout = ({ route, navigation }: ChapterScreenProps) => {
-  const theme = useTheme();
-  const { loading } = useChapterContext();
+  const { loading, novel, openChapter, hideHeader } = useChapterContext();
+  const insets = useScreenInsets();
+  const { verticalSeekbar = true } = useChapterGeneralSettings();
   const [open, setOpen] = useState(false);
+  const [findingChapter, setFindingChapter] = useState(false);
+  const drawerListRef = useRef<ComposeListHandle | null>(null);
   /**
    * The drawer renders a list of every chapter in the novel. Mounting it up
    * front competes with the chapter load for the JS thread, so it is deferred
@@ -98,13 +89,15 @@ const ReaderDrawerLayout = ({ route, navigation }: ChapterScreenProps) => {
     return () => handle.cancel();
   }, [drawerMounted, loading]);
 
-  useBackHandler(() => {
-    if (open) {
-      setOpen(false);
-      return true;
-    }
-    return false;
-  });
+  useBackHandler(
+    useCallback(() => {
+      if (open) {
+        setOpen(false);
+        return true;
+      }
+      return false;
+    }, [open]),
+  );
 
   const openDrawer = useCallback(() => {
     setDrawerMounted(true);
@@ -113,87 +106,52 @@ const ReaderDrawerLayout = ({ route, navigation }: ChapterScreenProps) => {
 
   const closeDrawer = useCallback(() => setOpen(false), []);
 
-  const renderDrawerContent = useCallback(
-    () => (drawerMounted ? <ChapterDrawer onClose={closeDrawer} /> : null),
-    [closeDrawer, drawerMounted],
-  );
+  const findChapter = useCallback(() => setFindingChapter(true), []);
 
-  /**
-   * `react-native-drawer-layout` paints the panel white by default and applies
-   * `drawerStyle` last, so the panel itself has to carry the drawer's surface
-   * colour. Left transparent, the reader showed through the panel for every
-   * frame before the content painted.
-   */
-  const drawerStyle = useMemo(
-    () => ({ backgroundColor: theme.surfaceContainerLow }),
-    [theme.surfaceContainerLow],
-  );
+  const layout = useWindowLayout();
 
   return (
-    <Drawer
-      drawerStyle={drawerStyle}
-      open={open}
-      onOpen={openDrawer}
-      onClose={closeDrawer}
-      renderDrawerContent={renderDrawerContent}
-    >
+    <View style={styles.container}>
       <ChapterContent
         route={route}
         navigation={navigation}
         openDrawer={openDrawer}
       />
-    </Drawer>
-  );
-};
-
-const ReaderSidePanel = ({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-}) => {
-  const theme = useTheme();
-  const { top, bottom, right } = useScreenInsets();
-  return (
-    <AppHost style={StyleSheet.absoluteFill}>
-      <Row modifiers={[fillMaxSize()]}>
-        {/* A tap beside the panel closes it; the page stays clear so changes
-            stay visible while they apply. */}
-        <Box
-          modifiers={[
-            weight(1),
-            fillMaxHeight(),
-            clickable(onClose, { indication: false }),
-          ]}
+      <ReaderSidePanel
+        open={open}
+        onOpenChange={next => (next ? openDrawer() : closeDrawer())}
+        side="start"
+        width={Math.min(layout.width - 56, CHAPTERS_PANEL_WIDTH)}
+        scrim
+        swipeable
+        keepMounted
+        edgeInsets={{
+          top: insets.top + BAR_HEIGHT,
+          bottom: insets.bottom + bottomBarHeight(verticalSeekbar),
+        }}
+        onEdgeTap={hideHeader}
+      >
+        {drawerMounted ? (
+          <ChapterDrawer
+            onClose={closeDrawer}
+            onFindChapter={findChapter}
+            listRef={drawerListRef}
+          />
+        ) : null}
+      </ReaderSidePanel>
+      <OverlayHost>
+        <JumpToChapterModal
+          modalVisible={findingChapter}
+          hideModal={() => setFindingChapter(false)}
+          novel={novel}
+          chapterListRef={drawerListRef}
+          onOpenChapter={chapter => {
+            closeDrawer();
+            openChapter(chapter);
+          }}
         />
-        <Surface
-          color={theme.surfaceContainerLow}
-          contentColor={theme.onSurface}
-          modifiers={[width(SIDE_PANEL_WIDTH + right), fillMaxHeight()]}
-        >
-          <Column modifiers={[fillMaxHeight(), padding(0, top, right, bottom)]}>
-            <Row
-              verticalAlignment="center"
-              modifiers={[fillMaxWidth(), height(64), padding(16, 0, 4, 0)]}
-            >
-              <AppText variant="titleLarge" modifiers={[weight(1)]}>
-                {title}
-              </AppText>
-              <IconButtonV2
-                name={CloseIcon}
-                accessibilityLabel={getString('common.close')}
-                onPress={onClose}
-                theme={theme}
-              />
-            </Row>
-            <Column modifiers={[fillMaxWidth(), weight(1)]}>{children}</Column>
-          </Column>
-        </Surface>
-      </Row>
-    </AppHost>
+      </OverlayHost>
+    </View>
   );
 };
 
@@ -372,12 +330,19 @@ export const ChapterContent = ({
       />
       <ReaderSideSeekbar visible={!hidden && !searching} />
       <ReaderTtsController />
-      {wide && settingsOpen ? (
+      {wide ? (
         <ReaderSidePanel
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          side="end"
+          width={SIDE_PANEL_WIDTH}
           title={getString('readerSettings.title')}
-          onClose={closeSettings}
         >
-          <ReaderBottomSheet fill />
+          <AppHost style={[styles.container, { paddingBottom: bottom }]}>
+            <Column modifiers={[fillMaxSize()]}>
+              <ReaderBottomSheet fill />
+            </Column>
+          </AppHost>
         </ReaderSidePanel>
       ) : null}
       <OverlayHost>
@@ -385,6 +350,7 @@ export const ChapterContent = ({
           visible={!wide && settingsOpen}
           onDismiss={closeSettings}
           scrollable={false}
+          transparentScrim
         >
           <ReaderBottomSheet bottomInset={bottom} />
         </BottomSheet>

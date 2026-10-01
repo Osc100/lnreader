@@ -14,6 +14,7 @@ import {
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
 import { bookmarkChapter } from '@database/queries/ChapterQueries';
+import { useChapterGeneralSettings } from '@hooks/persisted';
 import { useTheme } from '@hooks/persisted/useTheme';
 import { getString } from '@i18n/translations';
 import { useChapterContext } from '../ChapterContext';
@@ -84,6 +85,7 @@ const ReaderAppbar = ({
   const theme = useTheme();
   const { top, left, right } = useScreenInsets();
   const { chapter, novel, refetch, tts } = useChapterContext();
+  const { TTSEnable = true } = useChapterGeneralSettings();
   // Bookmark state until the chapter row catches up.
   const [toggled, setToggled] = useState<{
     chapterId: number;
@@ -177,17 +179,19 @@ const ReaderAppbar = ({
                 onPress={onToggleSearch}
                 theme={theme}
               />
-              <IconButtonV2
-                name={HeadphonesIcon}
-                accessibilityLabel={getString(
-                  speaking
-                    ? 'readerSettings.stopReading'
-                    : 'readerSettings.readAloud',
-                )}
-                selected={speaking}
-                onPress={speaking ? tts.stop : tts.start}
-                theme={theme}
-              />
+              {TTSEnable ? (
+                <IconButtonV2
+                  name={HeadphonesIcon}
+                  accessibilityLabel={getString(
+                    speaking
+                      ? 'readerSettings.stopReading'
+                      : 'readerSettings.readAloud',
+                  )}
+                  selected={speaking}
+                  onPress={speaking ? tts.stop : tts.start}
+                  theme={theme}
+                />
+              ) : null}
               <IconButtonV2
                 name={bookmarked ? BookmarkAddedIcon : BookmarkIcon}
                 selected={bookmarked}

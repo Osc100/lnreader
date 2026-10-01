@@ -1,15 +1,14 @@
 import {
   ReactNode,
+  RefObject,
   useCallback,
-  useContext,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { DrawerProgressContext } from 'react-native-drawer-layout';
-import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 import { Column, Row } from '@expo/ui/jetpack-compose';
 import {
   fillMaxWidth,
@@ -34,16 +33,27 @@ import noop from 'lodash-es/noop';
 import { useNovelActions, useNovelValue } from '@screens/novel/NovelContext';
 import { ChapterInfo } from '@database/types';
 import CloseIcon from '@expo/material-symbols/close.xml';
+import ManageSearchIcon from '@expo/material-symbols/manage_search.xml';
+import MyLocationIcon from '@expo/material-symbols/my_location.xml';
 
 type ButtonProperties = {
   text: string;
   index?: number;
+  viewPosition?: number;
 };
+
+const CENTER = 0.5;
 
 type ButtonsProperties = {
   up: ButtonProperties;
   down: ButtonProperties;
 };
+
+// 48dp icon buttons with 8dp above and below.
+const HEADER_HEIGHT = 64;
+
+// Two buttons of 48dp (with their touch target), 8dp apart, 8dp from the list.
+const FOOTER_BUTTONS_HEIGHT = 112;
 
 const viewabilityConfig = {
   minimumViewTime: 100,
@@ -52,33 +62,33 @@ const viewabilityConfig = {
 
 type ChapterDrawerProps = {
   onClose?: () => void;
+  onFindChapter?: () => void;
+  /** Shared with the find-chapter dialog, which scrolls the list. */
+  listRef?: RefObject<ComposeListHandle | null>;
 };
 
-// Hosts mounted in the closed drawer panel stay blank at zero height until
-// their layout changes, so the host's own style changes once it opens.
-const DrawerHost = ({ children }: { children: ReactNode }) => {
-  const drawerProgress = useContext(DrawerProgressContext);
-  const [laidOut, setLaidOut] = useState(drawerProgress === undefined);
-  useAnimatedReaction(
-    () => (drawerProgress?.value ?? 1) >= 1,
-    open => {
-      if (open) {
-        runOnJS(setLaidOut)(true);
-      }
-    },
-    [drawerProgress],
-  );
-  return (
-    <AppHost
-      matchContents={{ vertical: true }}
-      style={laidOut ? undefined : styles.pendingHost}
-    >
-      {children}
-    </AppHost>
-  );
-};
+// Fixed heights: the header and footer sit in plain React Native layout
+// around the list, and matchContents hosts there could measure zero.
+const DrawerHost = ({
+  children,
+  height,
+}: {
+  children: ReactNode;
+  height: number;
+}) => <AppHost style={{ height }}>{children}</AppHost>;
 
-const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
+const ChapterDrawer = ({
+  onClose,
+  onFindChapter,
+  listRef: sharedListRef,
+}: ChapterDrawerProps) => {
+  const listRef = useRef<ComposeListHandle | null>(null);
+  useImperativeHandle(sharedListRef, () => ({
+    scrollToIndex: (index, options) =>
+      listRef.current?.scrollToIndex(index, options),
+    scrollToTop: () => listRef.current?.scrollToTop(),
+    scrollToEnd: options => listRef.current?.scrollToEnd(options),
+  }));
   const { chapter, openChapter: openReaderChapter } = useChapterContext();
   const chapters = useNovelValue('chapters');
   const novelSettings = useNovelValue('novelSettings');
@@ -89,8 +99,11 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
 
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { defaultChapterSort } = useAppSettings();
-  const listRef = useRef<ComposeListHandle | null>(null);
+  const {
+    defaultChapterSort,
+    dateFormat = 'default',
+    relativeTimestamps = true,
+  } = useAppSettings();
 
   const { sort = defaultChapterSort } = novelSettings;
   const listAscending = sort.endsWith('Asc');
@@ -128,10 +141,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
     return index >= 0 ? index : 0;
   }, [chapter.id, chapters]);
 
-  const currentScrollIndex =
-    currentChapterIndex === undefined
-      ? undefined
-      : Math.max(0, currentChapterIndex - 2);
+  const currentScrollIndex = currentChapterIndex;
 
   /**
    * Index the list should sit at, or `undefined` while the chapters are still
@@ -162,6 +172,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
         const currentChapterButton = {
           text: getString('readerScreen.drawer.scrollToCurrentChapter'),
           index: currentScrollIndex,
+          viewPosition: CENTER,
         };
 
         if (
@@ -202,15 +213,18 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
         theme={theme}
         chapterId={chapter.id}
         onPress={openChapter}
+        dateFormat={dateFormat}
+        relativeTimestamps={relativeTimestamps}
       />
     ),
-    [chapter.id, openChapter, theme],
+    [chapter.id, dateFormat, openChapter, relativeTimestamps, theme],
   );
 
-  const scroll = useCallback((index?: number) => {
+  const scroll = useCallback((index?: number, viewPosition?: number) => {
     if (index !== undefined) {
       listRef.current?.scrollToIndex(index, {
         animated: true,
+        viewPosition,
       });
     } else {
       listRef.current?.scrollToEnd({
@@ -230,7 +244,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
       scrollToIndex.current !== undefined &&
       currentScrollIndex !== scrollToIndex.current
     ) {
-      scroll(currentScrollIndex);
+      scroll(currentScrollIndex, CENTER);
     }
     scrollToIndex.current = currentScrollIndex;
   }, [currentScrollIndex, scroll]);
@@ -242,7 +256,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
         { backgroundColor: theme.surface, paddingTop: insets.top },
       ]}
     >
-      <DrawerHost>
+      <DrawerHost height={HEADER_HEIGHT}>
         <Row
           verticalAlignment="center"
           modifiers={[fillMaxWidth(), padding(16, 8, 4, 8)]}
@@ -255,6 +269,25 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
           >
             {getString('common.chapters')}
           </AppText>
+          {onFindChapter ? (
+            <IconButtonV2
+              accessibilityLabel={getString(
+                'novelScreen.jumpToChapterModal.jumpToChapter',
+              )}
+              name={ManageSearchIcon}
+              onPress={onFindChapter}
+              theme={theme}
+            />
+          ) : null}
+          <IconButtonV2
+            accessibilityLabel={getString(
+              'readerScreen.drawer.scrollToCurrentChapter',
+            )}
+            name={MyLocationIcon}
+            disabled={currentScrollIndex === undefined}
+            onPress={() => scroll(currentScrollIndex, CENTER)}
+            theme={theme}
+          />
           {onClose ? (
             <IconButtonV2
               accessibilityLabel={getString('common.close')}
@@ -282,6 +315,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
           renderItem={renderItem}
           estimatedItemSize={62}
           initialIndex={currentScrollIndex}
+          initialViewPosition={CENTER}
           contentPadding={{ top: 12, bottom: 8 }}
           onEndReached={
             batchInformation.batch < batchInformation.total && !fetching
@@ -291,7 +325,7 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
           onEndReachedThreshold={6}
         />
       )}
-      <DrawerHost>
+      <DrawerHost height={FOOTER_BUTTONS_HEIGHT + Math.max(insets.bottom, 8)}>
         <Column
           verticalArrangement={{ spacedBy: 8 }}
           modifiers={[
@@ -302,13 +336,20 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
           <Button
             mode="contained"
             title={footerBtnProps.up.text}
-            onPress={() => scroll(footerBtnProps.up.index)}
+            onPress={() =>
+              scroll(footerBtnProps.up.index, footerBtnProps.up.viewPosition)
+            }
             modifiers={[fillMaxWidth()]}
           />
           <Button
             mode="contained"
             title={footerBtnProps.down.text}
-            onPress={() => scroll(footerBtnProps.down.index)}
+            onPress={() =>
+              scroll(
+                footerBtnProps.down.index,
+                footerBtnProps.down.viewPosition,
+              )
+            }
             modifiers={[fillMaxWidth()]}
           />
         </Column>
@@ -320,9 +361,6 @@ const ChapterDrawer = ({ onClose }: ChapterDrawerProps) => {
 const styles = StyleSheet.create({
   drawer: {
     flex: 1,
-  },
-  pendingHost: {
-    minHeight: 1,
   },
 });
 

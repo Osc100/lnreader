@@ -4,6 +4,7 @@ import {
   SharedValue,
   useAnimatedReaction,
 } from 'react-native-reanimated';
+import Color from 'color';
 import { getString } from '@i18n/translations';
 import { Appbar, IconButtonV2, OverflowMenu } from '@components';
 import { ThemeColors } from '@theme/types';
@@ -46,13 +47,13 @@ const NovelAppbar = ({
   headerOpacity: SharedValue<number>;
   hideActions?: boolean;
 }) => {
-  // The Compose bar cannot read a shared value; mirror whether it is shown.
-  const [opaque, setOpaque] = useState(false);
+  // The Compose bar cannot read a shared value; it fades in tenths.
+  const [opacity, setOpacity] = useState(0);
   useAnimatedReaction(
-    () => headerOpacity.value > 0,
+    () => Math.round(headerOpacity.value * 10) / 10,
     (current, previous) => {
       if (current !== previous) {
-        runOnJS(setOpaque)(current);
+        runOnJS(setOpacity)(current);
       }
     },
     [headerOpacity],
@@ -154,9 +155,10 @@ const NovelAppbar = ({
   return (
     <Appbar
       handleGoBack={goBack}
-      title={opaque ? novel?.name ?? '' : ''}
+      title={opacity > 0 ? novel?.name ?? '' : ''}
+      titleColor={Color(theme.onSurface).alpha(opacity).string()}
       theme={theme}
-      containerColor={opaque ? theme.surfaceContainer : 'transparent'}
+      containerColor={Color(theme.surfaceContainer).alpha(opacity).string()}
     >
       {hideActions ? null : (
         <>

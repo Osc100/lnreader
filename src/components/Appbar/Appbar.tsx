@@ -20,6 +20,7 @@ interface AppbarProps {
   mode?: 'small' | 'medium' | 'large' | 'center-aligned';
   children?: React.ReactNode;
   containerColor?: string;
+  titleColor?: string;
   /** Compose top bars draw under the status bar, so the bar pads itself. */
   insetTop?: boolean;
 }
@@ -38,6 +39,7 @@ const Appbar: React.FC<AppbarProps> = ({
   mode = 'large',
   children,
   containerColor,
+  titleColor,
   insetTop = true,
 }) => {
   const { top, left, right } = useScreenInsets();
@@ -71,7 +73,11 @@ const Appbar: React.FC<AppbarProps> = ({
           horizontalAlignment={mode === 'center-aligned' ? 'center' : 'start'}
           modifiers={[weight(1), padding(showBack ? 4 : 12, 0, 4, 0)]}
         >
-          <AppText variant="titleLarge" color={theme.onSurface} maxLines={1}>
+          <AppText
+            variant="titleLarge"
+            color={titleColor ?? theme.onSurface}
+            maxLines={1}
+          >
             {title}
           </AppText>
         </Column>

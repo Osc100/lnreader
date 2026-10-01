@@ -12,6 +12,7 @@ import {
   size,
   type ModifierConfig,
 } from '@expo/ui/jetpack-compose/modifiers';
+import Color from 'color';
 import { useTheme } from '@hooks/persisted/useTheme';
 
 /** Stops help with a few values; beyond that they are just noise. */
@@ -53,6 +54,14 @@ const Slider = ({
   modifiers,
 }: SliderProps) => {
   const theme = useTheme();
+  // Some themes (Midnight Dusk) make the secondary container the primary
+  // colour, which would hide where the track ends.
+  const tinted =
+    Color(theme.secondaryContainer).hex() !== Color(theme.primary).hex();
+  const inactiveTrack = tinted
+    ? theme.secondaryContainer
+    : theme.surfaceContainerHighest;
+  const inactiveTick = tinted ? theme.onSecondaryContainer : theme.onSurface;
   const [dragValue, setDragValue] = useState<number | null>(null);
   // The finish event can arrive before React re-renders with the last drag value.
   const latest = useRef<number | null>(null);
@@ -90,9 +99,9 @@ const Slider = ({
       colors={{
         thumbColor: handleColor ?? theme.primary,
         activeTrackColor: activeTrackColor ?? theme.primary,
-        inactiveTrackColor: inactiveTrackColor ?? theme.secondaryContainer,
+        inactiveTrackColor: inactiveTrackColor ?? inactiveTrack,
         activeTickColor: theme.onPrimary,
-        inactiveTickColor: theme.onSecondaryContainer,
+        inactiveTickColor: inactiveTick,
       }}
       modifiers={modifiers ?? [fillMaxWidth()]}
     >

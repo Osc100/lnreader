@@ -56,6 +56,8 @@ export type NativeToWebMessage =
       type: 'auto-scroll';
       interval: number;
       distance?: number;
+      /** Glide continuously; otherwise jump `distance` every `interval` (default). */
+      smooth?: boolean;
     }
   | { type: 'search'; query: string }
   | { type: 'search-step'; direction: 1 | -1 }

@@ -1,17 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { Column } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding } from '@expo/ui/jetpack-compose/modifiers';
+import { Column, Row } from '@expo/ui/jetpack-compose';
+import {
+  fillMaxWidth,
+  padding,
+  weight,
+} from '@expo/ui/jetpack-compose/modifiers';
 import defaultTo from 'lodash-es/defaultTo';
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 import { getString } from '@i18n/translations';
-import { List, Button, SwitchItem, TextInput } from '@components/index';
+import {
+  AppText,
+  List,
+  Slider,
+  SwitchItem,
+  TextInput,
+} from '@components/index';
 import VolumeUpIcon from '@expo/material-symbols/volume_up.xml';
 import HeightIcon from '@expo/material-symbols/height.xml';
 import SwipeLeftIcon from '@expo/material-symbols/swipe_left.xml';
 import TouchAppIcon from '@expo/material-symbols/touch_app.xml';
 import AllInclusiveIcon from '@expo/material-symbols/all_inclusive.xml';
 import AutoplayIcon from '@expo/material-symbols/autoplay.xml';
+import MotionBlurIcon from '@expo/material-symbols/motion_blur.xml';
+import {
+  MAX_AUTO_SCROLL_INTERVAL,
+  MIN_AUTO_SCROLL_INTERVAL,
+} from '@utils/constants/readerConstants';
+
+const AUTO_SCROLL_INTERVAL_STEP = 5;
 
 const NavigationTab: React.FC = () => {
   const theme = useTheme();
@@ -22,7 +39,7 @@ const NavigationTab: React.FC = () => {
     swipeGestures = false,
     autoScroll = false,
     autoScrollInterval = 10,
-    autoScrollOffset = null,
+    autoScrollSmooth = false,
     tapToScroll = false,
     continuousChapters = true,
     pageReader = false,
@@ -31,8 +48,11 @@ const NavigationTab: React.FC = () => {
 
   const { height: screenHeight } = useWindowDimensions();
 
-  const areAutoScrollSettingsDefault =
-    autoScrollInterval === 10 && autoScrollOffset === null;
+  const [intervalDrag, setIntervalDrag] = useState<number>();
+  const interval = Math.min(
+    MAX_AUTO_SCROLL_INTERVAL,
+    Math.max(MIN_AUTO_SCROLL_INTERVAL, autoScrollInterval),
+  );
 
   return (
     <Column modifiers={[fillMaxWidth()]}>
@@ -96,7 +116,9 @@ const NavigationTab: React.FC = () => {
           label={getString('readerScreen.bottomSheet.swipeGestures')}
           icon={SwipeLeftIcon}
           description={getString(
-            'readerScreen.bottomSheet.swipeGesturesDescription',
+            pageReader
+              ? 'readerSettings.disabledInPagedMode'
+              : 'readerScreen.bottomSheet.swipeGesturesDescription',
           )}
           value={swipeGestures}
           disabled={pageReader}
@@ -126,7 +148,11 @@ const NavigationTab: React.FC = () => {
         <SwitchItem
           label={getString('readerSettings.continuousChapters')}
           icon={AllInclusiveIcon}
-          description={getString('readerSettings.continuousChaptersDesc')}
+          description={getString(
+            pageReader
+              ? 'readerSettings.disabledInPagedMode'
+              : 'readerSettings.continuousChaptersDesc',
+          )}
           value={continuousChapters}
           disabled={pageReader}
           onPress={() =>
@@ -146,59 +172,54 @@ const NavigationTab: React.FC = () => {
           label={getString('readerScreen.bottomSheet.autoscroll')}
           icon={AutoplayIcon}
           description={getString(
-            'readerScreen.bottomSheet.autoscrollDescription',
+            pageReader
+              ? 'readerSettings.disabledInPagedMode'
+              : 'readerScreen.bottomSheet.autoscrollDescription',
           )}
           value={autoScroll}
           disabled={pageReader}
           onPress={() => setChapterGeneralSettings({ autoScroll: !autoScroll })}
           theme={theme}
         />
-        {autoScroll && !pageReader && (
-          <>
-            <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
-              <TextInput
-                label={getString('readerSettings.autoScrollInterval')}
-                keyboardType="number"
-                value={defaultTo(autoScrollInterval, 10).toString()}
-                onChangeText={text => {
-                  if (text) {
-                    setChapterGeneralSettings({
-                      autoScrollInterval: Number(text),
-                    });
-                  }
-                }}
-              />
-            </Column>
-            <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
-              <TextInput
-                label={getString('readerSettings.autoScrollOffset')}
-                keyboardType="number"
-                value={defaultTo(
-                  autoScrollOffset,
-                  Math.round(screenHeight),
-                ).toString()}
-                onChangeText={text => {
-                  if (text) {
-                    setChapterGeneralSettings({
-                      autoScrollOffset: Number(text),
-                    });
-                  }
-                }}
-              />
-            </Column>
-            {!areAutoScrollSettingsDefault && (
-              <Column modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}>
-                <Button
-                  title={getString('common.reset')}
-                  onPress={() => {
-                    setChapterGeneralSettings({ autoScrollInterval: 10 });
-                    setChapterGeneralSettings({ autoScrollOffset: null });
-                  }}
-                />
-              </Column>
-            )}
-          </>
-        )}
+        <SwitchItem
+          label={getString('readerSettings.autoScrollSmooth')}
+          icon={MotionBlurIcon}
+          description={getString('readerSettings.autoScrollSmoothDesc')}
+          value={autoScrollSmooth}
+          disabled={!autoScroll || pageReader}
+          onPress={() =>
+            setChapterGeneralSettings({ autoScrollSmooth: !autoScrollSmooth })
+          }
+          theme={theme}
+        />
+        <Column modifiers={[fillMaxWidth(), padding(16, 8, 16, 8)]}>
+          <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
+            <AppText
+              variant="bodyMedium"
+              color={theme.onSurfaceVariant}
+              modifiers={[weight(1)]}
+            >
+              {getString('readerSettings.autoScrollInterval')}
+            </AppText>
+            <AppText variant="labelLarge">
+              {`${intervalDrag ?? interval}s`}
+            </AppText>
+          </Row>
+          <Slider
+            value={interval}
+            min={MIN_AUTO_SCROLL_INTERVAL}
+            max={MAX_AUTO_SCROLL_INTERVAL}
+            step={AUTO_SCROLL_INTERVAL_STEP}
+            disabled={!autoScroll || pageReader}
+            onValueChange={value => setIntervalDrag(Math.round(value))}
+            onSlidingComplete={value => {
+              setIntervalDrag(undefined);
+              setChapterGeneralSettings({
+                autoScrollInterval: Math.round(value),
+              });
+            }}
+          />
+        </Column>
       </Column>
     </Column>
   );

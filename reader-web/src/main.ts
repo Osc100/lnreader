@@ -73,7 +73,12 @@ const handle = (state: ReaderState, message: NativeToWebMessage) => {
       void turn(state, message.direction, message.distance);
       break;
     case 'auto-scroll':
-      setAutoScroll(state, message.interval, message.distance);
+      setAutoScroll(
+        state,
+        message.interval,
+        message.distance,
+        message.smooth ?? false,
+      );
       break;
     case 'search':
       runSearch(state, message.query);

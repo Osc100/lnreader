@@ -216,15 +216,8 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
         />
       }
     >
-      {loading ? (
-        <>
-          <List.InfoItem
-            title={getString('downloadScreen.storageInfo')}
-            theme={theme}
-          />
-          <UpdatesSkeletonLoading theme={theme} />
-        </>
-      ) : null}
+      {/* The storage note comes with the list, once there is one to explain. */}
+      {loading ? <UpdatesSkeletonLoading theme={theme} /> : null}
     </Screen>
   );
 };

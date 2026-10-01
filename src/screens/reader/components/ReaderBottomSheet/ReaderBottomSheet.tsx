@@ -4,12 +4,10 @@ import { Column } from '@expo/ui/jetpack-compose';
 import {
   fillMaxWidth,
   height,
-  padding,
-  verticalScroll,
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
 
-import { TopTabBar } from '@components';
+import { ComposeTabPager } from '@components';
 import DisplayTab from '@screens/settings/SettingsReaderScreen/tabs/DisplayTab';
 import NavigationTab from '@screens/settings/SettingsReaderScreen/tabs/NavigationTab';
 import PaginationTab from '@screens/settings/SettingsReaderScreen/tabs/PaginationTab';
@@ -49,27 +47,29 @@ const ReaderBottomSheetV2: React.FC<ReaderBottomSheetV2Props> = ({
         fill ? weight(1) : height(Math.round(windowHeight * SHEET_HEIGHT)),
       ]}
     >
-      <TopTabBar
+      {/* Pages mount on first visit – the TTS tab alone enumerates the
+          device's engines and voices over the bridge. */}
+      <ComposeTabPager
         tabs={routes.map((route, i) => ({ key: i, label: route.title }))}
-        selectedKey={index}
-        onSelect={setIndex}
+        index={index}
+        onIndexChange={setIndex}
+        swipeEnabled={false}
+        bottomInset={bottomInset}
+        renderPage={page => {
+          switch (routes[page].key) {
+            case 'display':
+              return <DisplayTab inReaderSheet />;
+            case 'navigation':
+              return <NavigationTab />;
+            case 'pagination':
+              return <PaginationTab />;
+            case 'accessibility':
+              return <AccessibilityTab />;
+            default:
+              return <TTSTab />;
+          }
+        }}
       />
-      <Column
-        modifiers={[
-          fillMaxWidth(),
-          weight(1),
-          verticalScroll(),
-          padding(0, 0, 0, bottomInset + 16),
-        ]}
-      >
-        {/* Only the open tab is mounted – the TTS tab alone enumerates the
-            device's engines and voices over the bridge. */}
-        {routes[index].key === 'display' ? <DisplayTab inReaderSheet /> : null}
-        {routes[index].key === 'navigation' ? <NavigationTab /> : null}
-        {routes[index].key === 'pagination' ? <PaginationTab /> : null}
-        {routes[index].key === 'accessibility' ? <AccessibilityTab /> : null}
-        {routes[index].key === 'tts' ? <TTSTab /> : null}
-      </Column>
     </Column>
   );
 };

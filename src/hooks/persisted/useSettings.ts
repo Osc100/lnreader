@@ -189,6 +189,8 @@ export interface ChapterGeneralSettings {
   autoScroll: boolean;
   autoScrollInterval: number;
   autoScrollOffset: number | null;
+  /** Glide instead of jumping by the offset each interval. */
+  autoScrollSmooth: boolean;
   verticalSeekbar: boolean;
   removeExtraParagraphSpacing: boolean;
   bionicReading: boolean;
@@ -328,6 +330,7 @@ export const initialChapterGeneralSettings: ChapterGeneralSettings = {
   autoScroll: false,
   autoScrollInterval: 10,
   autoScrollOffset: null,
+  autoScrollSmooth: false,
   verticalSeekbar: true,
   removeExtraParagraphSpacing: false,
   bionicReading: false,

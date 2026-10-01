@@ -22,8 +22,12 @@ export const NEXT_CHAPTER_URL = 'lnreader://next-chapter';
 export const SPREAD_FILL_CLASS = 'ln-spread-fill';
 export const SPREAD_FILLED_CLASS = 'ln-filled';
 
+// Letters and digits only, so "Chapter 1 - Name" matches "Chapter 1: Name".
 const normalize = (text: string) =>
-  text.toLowerCase().replace(/\s+/g, ' ').trim();
+  text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 
 const SKIPPED = new Set(['SCRIPT', 'STYLE', 'PRE', 'CODE', 'KBD', 'SAMP']);
 
@@ -34,23 +38,32 @@ const startsWithTitle = (body: HTMLElement, title: string) => {
   if (!wanted) {
     return true;
   }
-  for (const element of body.querySelectorAll(TITLE_BLOCKS)) {
-    const text = normalize(element.textContent ?? '');
-    if (!text) {
-      continue;
-    }
-    if (text === wanted) {
-      return true;
-    }
-    const heading = /^H[1-6]$/.test(element.tagName);
-    // Only the first block with text counts; a long paragraph that merely
-    // starts with the same words is body text, not a title.
-    return (
-      (heading && text.includes(wanted)) ||
-      (text.startsWith(wanted) && text.length <= wanted.length + 12)
-    );
+  // The block around the first text: a wrapper's text is the whole chapter.
+  const walker = body.ownerDocument.createTreeWalker(
+    body,
+    NodeFilter.SHOW_TEXT,
+  );
+  let first = walker.nextNode();
+  while (
+    first &&
+    (!normalize(first.nodeValue ?? '') ||
+      SKIPPED.has(first.parentElement?.tagName ?? ''))
+  ) {
+    first = walker.nextNode();
   }
-  return false;
+  const element = first?.parentElement?.closest(TITLE_BLOCKS);
+  if (!element || !body.contains(element)) {
+    return false;
+  }
+  const text = normalize(element.textContent ?? '');
+  const heading = /^H[1-6]$/.test(element.tagName);
+  // A long paragraph that merely starts with the same words is body text,
+  // not a title.
+  return (
+    text === wanted ||
+    (heading && text.includes(wanted)) ||
+    (text.startsWith(wanted) && text.length <= wanted.length + 12)
+  );
 };
 
 const WORD = /\p{L}[\p{L}\p{M}'’]*/gu;

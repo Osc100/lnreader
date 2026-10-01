@@ -36,7 +36,28 @@ describe('buildReaderStyles', () => {
     expect(before).toContain('@font-face');
     expect(before).toContain('max-width: 100%');
     expect(after).toContain('font-size: 16px !important');
-    expect(after).toContain('font-family: "lora" !important');
+    expect(after).toContain('font-family: "lora";');
+  });
+
+  it('moves custom @import rules to the start of the styles', () => {
+    const css =
+      "@import url('https://fonts.googleapis.com/css2?family=Tsukimi+Rounded&display=swap');\n" +
+      "body { font-family: 'Tsukimi Rounded'; }";
+    const { before, after } = build({ customCss: css });
+    expect(before.trimStart().startsWith('@import url(')).toBe(true);
+    expect(after).not.toContain('@import');
+    expect(after).toContain("font-family: 'Tsukimi Rounded'");
+  });
+
+  it('lets custom CSS set the font on body', () => {
+    const { after } = build({
+      fontFamily: 'lora',
+      customCss: 'body { font-family: serif; }',
+    });
+    expect(after).not.toContain('font-family: "lora" !important');
+    expect(after.indexOf('font-family: serif')).toBeGreaterThan(
+      after.indexOf('font-family: "lora"'),
+    );
   });
 
   it('keeps chapter fonts for the original family', () => {

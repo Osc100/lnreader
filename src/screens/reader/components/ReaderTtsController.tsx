@@ -95,8 +95,16 @@ const ReaderTtsController = () => {
   useEffect(() => {
     moveTo({ x: x.get(), y: y.get() });
   });
+  // Turning read-aloud off also ends what it is reading.
+  const stopTts = tts.stop;
+  useEffect(() => {
+    if (!TTSEnable && active) {
+      stopTts();
+    }
+  }, [TTSEnable, active, stopTts]);
 
-  const drag = (kind: 'bubble' | 'handle') =>
+  // The bubble and the handle both read from the paragraph they're dropped on.
+  const drag = () =>
     Gesture.Pan()
       .runOnJS(true)
       .minDistance(TTS_TAP_SLOP)
@@ -111,29 +119,25 @@ const ReaderTtsController = () => {
           y: from.y + event.translationY,
         });
         const now = Date.now();
-        if (kind === 'handle' && now - lastTarget.get() >= TTS_TARGET_MS) {
+        if (now - lastTarget.get() >= TTS_TARGET_MS) {
           lastTarget.set(now);
           tts.target({ x: event.absoluteX, y: event.absoluteY });
         }
       })
       .onEnd(event => {
-        if (kind === 'handle') {
-          tts.startAt({ x: event.absoluteX, y: event.absoluteY });
-        }
+        tts.startAt({ x: event.absoluteX, y: event.absoluteY });
       })
       .onFinalize(() => {
         setDragging(false);
-        if (kind === 'handle') {
-          tts.target();
-        }
+        tts.target();
       });
   const bubble = Gesture.Exclusive(
-    drag('bubble'),
+    drag(),
     Gesture.Tap()
       .runOnJS(true)
       .onEnd(() => setCollapsed(false)),
   );
-  const handle = drag('handle');
+  const handle = drag();
 
   if (!TTSEnable) {
     return null;

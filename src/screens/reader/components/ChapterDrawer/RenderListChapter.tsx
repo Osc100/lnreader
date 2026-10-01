@@ -10,6 +10,7 @@ import {
 import { AppText } from '@components';
 import { ChapterInfo } from '@database/types';
 import { ThemeColors } from '@theme/types';
+import { DateFormat, formatDate } from '@utils/dateFormat';
 
 type Props = {
   item: ChapterInfo;
@@ -17,6 +18,8 @@ type Props = {
   chapterId: number;
   /** Takes the chapter so the caller can pass a stable handler. */
   onPress: (chapter: ChapterInfo) => void;
+  dateFormat?: DateFormat;
+  relativeTimestamps?: boolean;
 };
 
 /**
@@ -24,7 +27,14 @@ type Props = {
  * re-rendering: the chapter list is re-created whenever reading progress is
  * written, which happens continuously while a chapter is open.
  */
-const RenderListChapter = ({ item, theme, onPress, chapterId }: Props) => {
+const RenderListChapter = ({
+  item,
+  theme,
+  onPress,
+  chapterId,
+  dateFormat = 'default',
+  relativeTimestamps = true,
+}: Props) => {
   const isCurrentChapter = item.id === chapterId;
 
   return (
@@ -64,7 +74,7 @@ const RenderListChapter = ({ item, theme, onPress, chapterId }: Props) => {
               : theme.outline
           }
         >
-          {item.releaseTime}
+          {formatDate(item.releaseTime, dateFormat, relativeTimestamps)}
         </AppText>
       ) : null}
     </Column>

@@ -8,7 +8,7 @@ import {
   type ModifierConfig,
 } from '@expo/ui/jetpack-compose/modifiers';
 import { ThemeColors } from '@theme/types';
-import { type IconSource } from '../AppIcon/AppIcon';
+import AppIcon, { type IconSource } from '../AppIcon/AppIcon';
 import AppText from '../AppText/AppText';
 
 export interface SegmentedControlOption<T> {
@@ -32,6 +32,8 @@ export interface SegmentedControlProps<T> {
   onChange: (value: T) => void;
   theme: ThemeColors;
   modifiers?: ModifierConfig[];
+  /** Show each option's icon in place of its label. */
+  iconOnly?: boolean;
 }
 
 export function SegmentedControl<T extends string | number>({
@@ -40,6 +42,7 @@ export function SegmentedControl<T extends string | number>({
   onChange,
   theme,
   modifiers,
+  iconOnly = false,
 }: SegmentedControlProps<T>) {
   return (
     <SingleChoiceSegmentedButtonRow modifiers={modifiers ?? [fillMaxWidth()]}>
@@ -51,9 +54,13 @@ export function SegmentedControl<T extends string | number>({
           colors={segmentColors(theme)}
         >
           <SegmentedButton.Label>
-            <AppText variant="labelLarge" maxLines={1}>
-              {option.label}
-            </AppText>
+            {iconOnly && option.icon ? (
+              <AppIcon source={option.icon} size={18} label={option.label} />
+            ) : (
+              <AppText variant="labelLarge" maxLines={1}>
+                {option.label}
+              </AppText>
+            )}
           </SegmentedButton.Label>
         </SegmentedButton>
       ))}

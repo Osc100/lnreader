@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Column, Row } from '@expo/ui/jetpack-compose';
 import {
   fillMaxWidth,
+  height,
   padding,
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
@@ -19,7 +20,9 @@ import {
 } from '@screens/library/constants/constants';
 import { RadioButton } from '@components/RadioButton/RadioButton';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
-import { AppText, Slider, TopTabBar } from '@components';
+import { AppText, ComposeTabPager, Slider } from '@components';
+
+const SHEET_HEIGHT = 520;
 
 interface LibraryBottomSheetProps {
   visible: boolean;
@@ -208,15 +211,26 @@ const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
   );
 
   return (
-    <BottomSheet visible={visible} onDismiss={onDismiss}>
-      <TopTabBar
-        tabs={routes.map((route, i) => ({ key: i, label: route.title }))}
-        selectedKey={index}
-        onSelect={setIndex}
-      />
-      {routes[index].key === 'first' ? <FirstRoute /> : null}
-      {routes[index].key === 'second' ? <SecondRoute /> : null}
-      {routes[index].key === 'third' ? <ThirdRoute /> : null}
+    <BottomSheet visible={visible} onDismiss={onDismiss} scrollable={false}>
+      {/* A fixed height, as before, so switching tabs doesn't resize it. */}
+      <Column modifiers={[fillMaxWidth(), height(SHEET_HEIGHT)]}>
+        <ComposeTabPager
+          tabs={routes.map((route, i) => ({ key: i, label: route.title }))}
+          index={index}
+          onIndexChange={setIndex}
+          swipeEnabled={false}
+          renderPage={page =>
+            routes[page].key === 'first' ? (
+              <FirstRoute />
+            ) : routes[page].key === 'second' ? (
+              <SecondRoute />
+            ) : (
+              <ThirdRoute />
+            )
+          }
+          fixed
+        />
+      </Column>
     </BottomSheet>
   );
 };

@@ -3,7 +3,6 @@ import {
   BasicAlertDialog,
   Box,
   Column,
-  FlowRow,
   Image,
   RNHostView,
   Row,
@@ -16,6 +15,7 @@ import {
   combinedClickable,
   fillMaxWidth,
   height,
+  horizontalScroll,
   matchParentSize,
   onSizeChanged,
   padding,
@@ -242,15 +242,14 @@ const NovelGenres = memo(({ theme, genres }: NovelGenresProps) => {
   const data = useMemo(() => parseGenres(genres), [genres]);
 
   return (
-    <FlowRow
+    <Row
       horizontalArrangement={{ spacedBy: 8 }}
-      verticalArrangement={{ spacedBy: 8 }}
-      modifiers={[fillMaxWidth(), padding(16, 4, 16, 8)]}
+      modifiers={[fillMaxWidth(), horizontalScroll(), padding(16, 4, 16, 8)]}
     >
       {data.map((item, index) => (
         <Chip key={'genre' + index} kind="assist" label={item} theme={theme} />
       ))}
-    </FlowRow>
+    </Row>
   );
 });
 
